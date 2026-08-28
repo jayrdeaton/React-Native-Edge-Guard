@@ -1,0 +1,93 @@
+{
+  "name": "@tastic/edge-guard",
+  "version": "0.1.0",
+  "description": "Opt-in guard against iOS's bottom-edge system gesture (home-indicator swipe / Reachability) firing over a full-screen or bottom-anchored touch control zone — an Expo config plugin plus the hook that drives it live from a settings toggle",
+  "keywords": [
+    "react-native",
+    "expo",
+    "ios",
+    "gesture",
+    "home-indicator",
+    "reachability",
+    "config-plugin",
+    "safe-area"
+  ],
+  "homepage": "https://github.com/jayrdeaton/react-native-edge-guard#readme",
+  "bugs": {
+    "url": "https://github.com/jayrdeaton/react-native-edge-guard/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jayrdeaton/react-native-edge-guard.git"
+  },
+  "license": "MIT",
+  "author": "Jay Deaton",
+  "sideEffects": false,
+  "type": "commonjs",
+  "exports": {
+    ".": {
+      "react-native": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "react-native": "src/index.ts",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "src",
+    "plugin",
+    "app.plugin.js",
+    "!src/__tests__",
+    "!src/__mocks__"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts --clean",
+    "build:watch": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "ci": "npm run lint && npm test && npm run typecheck && npm run build",
+    "fix": "eslint --fix",
+    "lint": "eslint",
+    "prepublishOnly": "npm run build",
+    "release": "git push --follow-tags",
+    "release:major": "npm version major && npm run release",
+    "release:minor": "npm version minor && npm run release",
+    "release:patch": "npm version patch && npm run release",
+    "test": "jest",
+    "test:watch": "jest --watchAll",
+    "typecheck": "tsc --noEmit",
+    "preversion": "npm run ci"
+  },
+  "prettier": "@infinitetoken/eslint-config/prettier",
+  "devDependencies": {
+    "@infinitetoken/eslint-config": "^0.1.4",
+    "@infinitetoken/tsconfig": "^0.1.1",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/jest": "^30.0.0",
+    "@types/react": "^19.0.0",
+    "eslint": "^9.39.4",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-native": "^5.0.0",
+    "expo": "~57.0.17",
+    "jest": "^30.4.2",
+    "jest-environment-jsdom": "^30.4.1",
+    "prettier": "^3.8.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-native": "^0.86.3",
+    "ts-jest": "^29.4.9",
+    "tsup": "^8.0.0",
+    "typescript": "^6.0.3"
+  },
+  "peerDependencies": {
+    "expo": ">=54.0.0",
+    "react": ">=19.0.0",
+    "react-native": ">=0.76.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
