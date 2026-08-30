@@ -1,17 +1,18 @@
 # @tastic/edge-guard
 
-An opt-in guard against iOS's bottom-edge system gesture (the home-indicator swipe, and
-incidentally Reachability) firing over a full-screen or bottom-anchored touch control zone — the
-kind of zone a local-multiplayer arcade game's swipe-to-steer or swipe-to-aim controls tend to use.
-Without it, a player's swipe that starts too close to the physical bottom edge is ambiguous
-between "steer the ship" and "leave the app."
+An opt-in guard against iOS's top- and bottom-edge system gestures (Notification Center / Control
+Center at the top; the home-indicator swipe and, incidentally, Reachability at the bottom) firing
+over a full-screen or edge-anchored touch control zone — the kind of zone a local-multiplayer
+arcade game's swipe-to-steer or swipe-to-aim controls tend to use. Without it, a player's swipe
+that starts too close to a physical screen edge is ambiguous between "steer the ship" and "leave
+the app" (or pull down Notification Center over it).
 
 ## What it does
 
 An Expo config plugin swizzles `UIViewController.preferredScreenEdgesDeferringSystemGestures` so
-iOS defers the bottom-edge system gesture to the app first. It doesn't disable the gesture — the OS
-still honors a second, more deliberate swipe — it just stops light accidental swipes near the edge
-from firing mid-gameplay.
+iOS defers its top- and bottom-edge system gestures to the app first. It doesn't disable those
+gestures — the OS still honors a second, more deliberate swipe — it just stops light accidental
+swipes near either edge from firing mid-gameplay.
 
 The `useEdgeGestureGuard(enabled)` hook is the runtime half: it mirrors `enabled` into native
 `UserDefaults` (via React Native's own built-in `Settings` bridge — no custom native module
@@ -19,9 +20,9 @@ required), which the plugin reads live and re-applies immediately on change, so 
 toggle mid-session takes effect without an app restart.
 
 Deliberately **off by default** wherever you wire it to a persisted setting — this is meant to be
-something a player opts into after actually hitting the "accidental swipe near the edge kicked me
-to the home screen" problem and gone looking for a fix, not a surprise a "second swipe near the
-bottom" behavior every player gets from install.
+something a player opts into after actually hitting the "accidental swipe near an edge kicked me
+out of the app" problem and gone looking for a fix, not a surprise "second swipe near the edge"
+behavior every player gets from install.
 
 iOS only. The plugin only patches `AppDelegate.swift`, and the hook no-ops on every other platform.
 
@@ -42,8 +43,8 @@ iOS only. The plugin only patches `AppDelegate.swift`, and the hook no-ops on ev
 ```tsx
 import { useEdgeGestureGuard } from '@tastic/edge-guard'
 
-function App({ settings }: { settings: { deferBottomEdgeGestures: boolean } }) {
-  useEdgeGestureGuard(settings.deferBottomEdgeGestures)
+function App({ settings }: { settings: { deferEdgeGestures: boolean } }) {
+  useEdgeGestureGuard(settings.deferEdgeGestures)
   // ...
 }
 ```

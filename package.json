@@ -1,7 +1,7 @@
 {
   "name": "@tastic/edge-guard",
   "version": "0.1.0",
-  "description": "Opt-in guard against iOS's bottom-edge system gesture (home-indicator swipe / Reachability) firing over a full-screen or bottom-anchored touch control zone — an Expo config plugin plus the hook that drives it live from a settings toggle",
+  "description": "Opt-in guard against iOS's top- and bottom-edge system gestures (Notification Center / Control Center, home-indicator swipe / Reachability) firing over a full-screen or edge-anchored touch control zone — an Expo config plugin plus the hook that drives it live from a settings toggle",
   "keywords": [
     "react-native",
     "expo",
@@ -40,14 +40,13 @@
     "dist",
     "src",
     "plugin",
-    "app.plugin.js",
+    "app.plugin.cjs",
     "!src/__tests__",
     "!src/__mocks__"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --format cjs,esm --dts --clean",
-    "build:watch": "tsup src/index.ts --format cjs,esm --dts --watch",
-    "ci": "npm run lint && npm test && npm run typecheck && npm run build",
+    "build": "tsup",
+    "build:watch": "tsup --watch",
     "fix": "eslint --fix",
     "lint": "eslint",
     "prepublishOnly": "npm run build",
@@ -58,12 +57,14 @@
     "test": "jest",
     "test:watch": "jest --watchAll",
     "typecheck": "tsc --noEmit",
-    "preversion": "npm run ci"
+    "verify": "npm run lint && npm test && npm run typecheck && npm run build",
+    "preversion": "npm run verify"
   },
   "prettier": "@infinitetoken/eslint-config/prettier",
   "devDependencies": {
-    "@infinitetoken/eslint-config": "^0.1.4",
-    "@infinitetoken/tsconfig": "^0.1.1",
+    "@infinitetoken/eslint-config": "^0.1.8",
+    "@infinitetoken/jest-config": "^0.2.0",
+    "@infinitetoken/tsconfig": "^0.3.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "^16.3.2",
     "@types/jest": "^30.0.0",
@@ -78,7 +79,6 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-native": "^0.86.3",
-    "ts-jest": "^29.4.9",
     "tsup": "^8.0.0",
     "typescript": "^6.0.3"
   },

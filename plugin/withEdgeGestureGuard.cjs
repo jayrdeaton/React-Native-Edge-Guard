@@ -1,11 +1,12 @@
 const { withAppDelegate } = require('expo/config-plugins')
 
-// Swizzles UIViewController.preferredScreenEdgesDeferringSystemGestures so the system defers the
-// bottom-edge system gesture (Reachability, and incidentally the home-indicator swipe) to the app
-// first, whenever the player has opted into that — see src/useEdgeGestureGuard.ts, which mirrors
-// the setting into UserDefaults under the key read below. Doesn't disable the gesture — the OS
-// still honors a second, more deliberate swipe — but stops light accidental swipes near the
-// bottom edge from firing over a full-screen or bottom-anchored touch control zone mid-gameplay.
+// Swizzles UIViewController.preferredScreenEdgesDeferringSystemGestures so the system defers its
+// top- and bottom-edge system gestures (Notification Center / Control Center at the top;
+// Reachability and the home-indicator swipe at the bottom) to the app first, whenever the player
+// has opted into that — see src/useEdgeGestureGuard.ts, which mirrors the setting into
+// UserDefaults under the key read below. Doesn't disable those gestures — the OS still honors a
+// second, more deliberate swipe — but stops light accidental swipes near either edge from firing
+// over a full-screen or edge-anchored touch control zone mid-gameplay.
 //
 // This is done via swizzling rather than wrapping the root view controller since a second wrapper
 // installed on top of whatever's already there risks tripping UIKit's "already a window's root
@@ -36,7 +37,7 @@ private let tastic_edgeGuardSwizzle: Void = {
 
 extension UIViewController {
   @objc func tastic_preferredScreenEdgesDeferringSystemGestures() -> UIRectEdge {
-    UserDefaults.standard.bool(forKey: "tastic_deferBottomEdgeGestures") ? .bottom : []
+    UserDefaults.standard.bool(forKey: "tastic_deferEdgeGestures") ? .all : []
   }
 }
 `
