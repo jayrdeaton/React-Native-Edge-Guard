@@ -9,9 +9,9 @@ Center at the top; the home-indicator swipe and Reachability at the bottom) firi
 full-screen or edge-anchored touch control zone. An Expo config plugin swizzles the relevant
 UIKit getter; a hook drives it live from a settings toggle.
 
-Part of the `@tastic`/`@rific` package ecosystem. This is a FIRST PUBLISH — `package.json` is
-`0.1.0` with no `private` field and `publishConfig.access: "public"` set, but no release has
-happened yet. There's no live npm install URL and no `npm view` history to check.
+Part of the `@tastic`/`@rific` package ecosystem. Published to the public npm registry (no
+`private` field, `publishConfig.access: "public"`) — `0.1.1` is live at
+`registry.npmjs.org/@tastic/edge-guard` and is what AirHockey and Pong currently install.
 
 ## Commands
 
@@ -30,8 +30,7 @@ Always run `npm run lint` before finishing any task.
 
 ## Release
 
-Not yet published — no release has been cut for this package. The tag-based release mechanism is
-already wired, just unexercised:
+`0.1.1` has already been published this way; the tag-based mechanism is exercised, not just wired:
 
 ```bash
 npm run release:patch   # npm version patch && git push --follow-tags (or release:minor / release:major)
@@ -40,9 +39,9 @@ npm run release:patch   # npm version patch && git push --follow-tags (or releas
 `preversion` runs `npm run verify` first; `prepublishOnly` runs `npm run build`. `.github/workflows/publish.yml`
 fires on `v*` tags and delegates to the shared reusable workflow
 (`infinitetoken/Workflows/.github/workflows/npm-publish.yml@v1`) with `id-token: write` permission
-for OIDC trusted publishing — same mechanism as the rest of the fleet, it just hasn't run yet for
-this package. `.github/workflows/ci.yml` runs on every PR and push to `main` via the shared
-`npm-ci.yml@v1` reusable workflow, which invokes this package's own `verify` script.
+for OIDC trusted publishing — same mechanism as the rest of the fleet. `.github/workflows/ci.yml`
+runs on every PR and push to `main` via the shared `npm-ci.yml@v1` reusable workflow, which invokes
+this package's own `verify` script.
 
 ## Architecture
 
@@ -56,10 +55,10 @@ src/
     useEdgeGestureGuard.test.ts
 plugin/
   withEdgeGestureGuard.cjs     - Expo config plugin: swizzles UIViewController.preferredScreenEdgesDeferringSystemGestures in AppDelegate.swift, re-queries every window's root view controller on UserDefaults.didChangeNotification so a mid-session toggle takes effect without a restart
-app.plugin.cjs                 - Expo plugin entry point (what "plugins": ["@tastic/edge-guard"] in app.json resolves to); re-exports plugin/withEdgeGestureGuard.cjs
+app.plugin.js                  - Expo plugin entry point (what "plugins": ["@tastic/edge-guard"] in app.json resolves to); re-exports plugin/withEdgeGestureGuard.cjs
 ```
 
-Both plugin files are `.cjs`, matching the fleet's tooling-config convention, even though neither strictly needs it: `package.json` already declares `"type": "commonjs"`, so plain `.js` would resolve identically here. Confirmed the rename is actually safe first, though, not just stylistically consistent — read `@expo/config-plugins`' real installed resolver source directly (`node_modules/@expo/config-plugins/build/utils/plugin-resolver.js`): its `pluginFileName`/`pluginExtensions` list explicitly includes `.cjs` alongside `.js` when resolving `app.plugin.*` (`.js` is just checked first, "keeps the published-artifact case at one stat" per its own comment) — so Expo's plugin resolution finds `app.plugin.cjs` exactly as it would `app.plugin.js`. Verified end-to-end by calling the real `resolveConfigPluginFunction` from this repo against itself: resolves to `app.plugin.cjs`, and the exported function correctly chains through to `withEdgeGestureGuard.cjs`'s export. `app.plugin.cjs`'s own `require('./plugin/withEdgeGestureGuard.cjs')` needs that extension spelled out explicitly — unlike Expo's resolver, Node's own bare extension-less `require()` does not probe `.cjs` on its own (confirmed directly: a bare `require('./target')` against a `target.cjs`-only file throws `MODULE_NOT_FOUND`).
+**Must be named `app.plugin.js` exactly — not `.cjs`.** An earlier version of this file was named `app.plugin.cjs` on the theory that Expo's plugin resolver probes multiple extensions (`.js`, `.cjs`, `.mjs`, `.ts`, `.cts`, `.mts`) via `pluginExtensions` in `@expo/config-plugins/build/utils/plugin-resolver.js` — true for the project's own locally-installed `@expo/config-plugins` (confirmed at 57.0.9), but **false** for the resolver `eas build --local`/EAS Build actually uses: `eas-cli` bundles its own older, separately-versioned `@expo/config-plugins` (confirmed at 55.0.7, under `eas-cli/node_modules`), whose `resolvePluginForModule` hardcodes the single literal filename `app.plugin.js` with no extension probing at all. Consuming apps (AirHockey, Pong) failed `eas build --local` with `No "app.plugin.js" file found in @tastic/edge-guard` even though plain `expo prebuild` succeeded moments earlier — because prebuild-on-its-own used the newer project-local resolver, while `eas build --local` re-ran its own internal prebuild step through the older bundled one. `package.json` already declares `"type": "commonjs"`, so plain `.js` resolves identically to `.cjs` here — the rename costs nothing and is the only spelling every version of the resolver agrees on. Don't revert this without re-verifying against `eas-cli`'s actual bundled resolver, not just the project's own `node_modules`.
 
 ### How the hook and plugin connect
 
