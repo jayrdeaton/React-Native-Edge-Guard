@@ -76,7 +76,8 @@ rebuild (`expo prebuild` + a fresh build) is required after adding or removing t
 From `src/index.ts`:
 
 - `EDGE_GUARD_USER_DEFAULTS_KEY` — the UserDefaults key (`'tastic_deferEdgeGestures'`) the config plugin reads
-- `useEdgeGestureGuard(enabled: boolean): void` — mirrors `enabled` into native UserDefaults on iOS; no-op on every other platform
+- `useEdgeGestureGuard(enabled: boolean): void` — mirrors `enabled` into native UserDefaults on iOS; no-op on every other platform. Resets the default back to `false` on unmount (a separate, mount-once effect, not a cleanup on the sync effect — see the hook's own doc) — a defensive improvement for any future caller that scopes this hook to a screen/component rather than an app's whole lifetime, though no current consumer actually does that (see below).
+  - Real consumers (Snake, LightCycles, AirHockey, Pong, BoxHockey) all call this exactly once, permanently mounted at the app root (Snake: `Providers.tsx`'s `EdgeGuardBridge`; the other four: `useGameSettings.tsx`'s `GameSettingsProvider`) — matching every other cross-cutting settings bridge in those apps (haptics, sound, scroll-view). `enabled` combines the persisted user setting with a transient "is a round actually live right now" signal that each app's own game screen reports up (Redux for Snake — a small dedicated `liveplaySlice`, built on `@rific/core`'s `createSettingsSlice` and blacklisted from redux-persist; Context for the other four, a plain non-persisted field alongside `activeRoundSettings`), rather than the hook itself being mounted/unmounted per screen. That's what actually keeps Edge Guard both a real opt-in and scoped to actual gameplay — the unmount-reset above isn't what's doing that work for any of them today.
 
 ## Peer Dependencies
 
@@ -88,7 +89,7 @@ From `src/index.ts`:
 
 - Framework: Jest (`@infinitetoken/jest-config/react-native`), jsdom environment
 - Mock: `src/__mocks__/react-native.ts` mapped over the real `react-native` module in `jest.config.cjs`
-- 4 tests in 1 suite (`useEdgeGestureGuard.test.ts`): mirrors `true`/`false` into `Settings.set`, re-syncs on `enabled` change, no-ops on non-iOS platforms
+- 6 tests in 1 suite (`useEdgeGestureGuard.test.ts`): mirrors `true`/`false` into `Settings.set`, re-syncs on `enabled` change, no-ops on non-iOS platforms, resets to `false` on unmount (and no-ops there too off iOS). The suite's own `afterEach` calls RTL's `cleanup()` explicitly, before `jest.clearAllMocks()`/resetting `Platform.OS` — needed once unmounting started having a real side effect (the mount-once cleanup effect), so a test that never calls `unmount()` itself doesn't leak a stray call into the next test via RTL's own implicit between-test unmount.
 - 100% statements/branches/functions/lines on `useEdgeGestureGuard.ts` (the only file coverage is collected on — the preset's default `collectCoverageFrom` excludes `src/index.ts`), well clear of the preset's 70%×4 default threshold
 
 ## Code Style

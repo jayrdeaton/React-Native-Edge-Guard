@@ -17,10 +17,24 @@ export const EDGE_GUARD_USER_DEFAULTS_KEY = 'tastic_deferEdgeGestures'
  *
  * iOS only. On every other platform react-native's fallback Settings module just warns and
  * no-ops, so this skips the call entirely there rather than spamming that warning.
+ *
+ * Resets the native default back to `false` when the calling component unmounts, so it's safe to
+ * scope a call to just the screen/component that owns the touch zone being protected (rather than
+ * only ever mounting it once for an app's entire lifetime) — without this, a caller that stops
+ * rendering mid-`true` would leave the guard stuck on for whatever mounts next, or even across a
+ * later cold launch, since UserDefaults persists across those too.
  */
 export function useEdgeGestureGuard(enabled: boolean): void {
   useEffect(() => {
     if (Platform.OS !== 'ios') return
     Settings.set({ [EDGE_GUARD_USER_DEFAULTS_KEY]: enabled })
   }, [enabled])
+
+  // A separate, mount-once effect rather than a cleanup on the one above — a cleanup there would
+  // also fire (and redundantly write `false`) on every ordinary `enabled` toggle, not just a real
+  // unmount, since React tears down and re-runs an effect whenever its own deps change.
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return
+    return () => Settings.set({ [EDGE_GUARD_USER_DEFAULTS_KEY]: false })
+  }, [])
 }

@@ -1,10 +1,15 @@
-import { renderHook } from '@testing-library/react'
+import { cleanup, renderHook } from '@testing-library/react'
 import { Platform, Settings } from 'react-native'
 
 import { EDGE_GUARD_USER_DEFAULTS_KEY, useEdgeGestureGuard } from '../useEdgeGestureGuard'
 
 describe('useEdgeGestureGuard', () => {
+  // Explicit, in this order — a test that never calls unmount() itself still gets unmounted
+  // automatically between tests (RTL's own default afterEach), which now has a real side effect
+  // (the mount-once cleanup effect below) — cleanup() must run, and be cleared/reset, deterministically
+  // before the next test's own assertions, rather than racing RTL's implicitly-registered afterEach.
   afterEach(() => {
+    cleanup()
     jest.clearAllMocks()
     Platform.OS = 'ios'
   })
@@ -29,6 +34,20 @@ describe('useEdgeGestureGuard', () => {
   it('does not touch Settings on non-iOS platforms', () => {
     Platform.OS = 'android'
     renderHook(() => useEdgeGestureGuard(true))
+    expect(Settings.set).not.toHaveBeenCalled()
+  })
+
+  it('resets UserDefaults to false on unmount', () => {
+    const { unmount } = renderHook(() => useEdgeGestureGuard(true))
+    expect(Settings.set).toHaveBeenLastCalledWith({ [EDGE_GUARD_USER_DEFAULTS_KEY]: true })
+    unmount()
+    expect(Settings.set).toHaveBeenLastCalledWith({ [EDGE_GUARD_USER_DEFAULTS_KEY]: false })
+  })
+
+  it('does not touch Settings on unmount on non-iOS platforms', () => {
+    Platform.OS = 'android'
+    const { unmount } = renderHook(() => useEdgeGestureGuard(true))
+    unmount()
     expect(Settings.set).not.toHaveBeenCalled()
   })
 })
