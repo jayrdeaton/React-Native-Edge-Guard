@@ -1,6 +1,6 @@
 {
   "name": "@tastic/edge-guard",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Opt-in guard against iOS's top- and bottom-edge system gestures (Notification Center / Control Center, home-indicator swipe / Reachability) firing over a full-screen or edge-anchored touch control zone — an Expo config plugin plus the hook that drives it live from a settings toggle",
   "keywords": [
     "react-native",
