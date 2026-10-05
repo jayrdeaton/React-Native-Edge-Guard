@@ -44,10 +44,15 @@ extension UIViewController {
 
 const IMPORT_ANCHOR = 'import ReactAppDependencyProvider'
 
-const START_REACT_NATIVE_ANCHOR = `    factory.startReactNative(
-      withModuleName: "main",
-      in: window,
-      launchOptions: launchOptions)`
+// The swizzle call goes right before didFinishLaunching's closing `return super.application(...)`,
+// which both of Expo's AppDelegate layouts still have: the window-based one (SDK 57 and earlier),
+// where AppDelegate creates the window and calls factory.startReactNative(...) itself, and the
+// scene-based one iOS 27 requires (SDK 58's template, or SDK 57 with expo-build-properties'
+// ios.enableSceneSupport), where Expo's scene delegate (ExpoAppSceneDelegate, which SDK 58's
+// SceneDelegate subclasses) does both instead and neither appears in AppDelegate at all.
+// didFinishLaunching still runs before any scene connects, and the swizzle is on the base
+// UIViewController class, so it also covers the root view controller the scene delegate creates.
+const DID_FINISH_LAUNCHING_RETURN_ANCHOR = '    return super.application(application, didFinishLaunchingWithOptions: launchOptions)'
 
 const MARKER = 'tastic_edgeGuardSwizzle'
 
@@ -63,12 +68,13 @@ function withEdgeGestureGuard(config) {
       return config
     }
 
-    if (!contents.includes(IMPORT_ANCHOR) || !contents.includes(START_REACT_NATIVE_ANCHOR)) {
-      throw new Error('withEdgeGestureGuard could not find the expected imports or factory.startReactNative(...) ' + 'call in AppDelegate.swift. The Expo template likely changed — update this plugin to match.')
+    const missingAnchor = [IMPORT_ANCHOR, DID_FINISH_LAUNCHING_RETURN_ANCHOR].find((anchor) => !contents.includes(anchor))
+    if (missingAnchor) {
+      throw new Error(`withEdgeGestureGuard could not find \`${missingAnchor.trim()}\` in AppDelegate.swift. ` + 'The Expo template likely changed — update this plugin to match.')
     }
 
     contents = contents.replace(IMPORT_ANCHOR, `${IMPORT_ANCHOR}\nimport ObjectiveC`)
-    contents = contents.replace(START_REACT_NATIVE_ANCHOR, `${START_REACT_NATIVE_ANCHOR}\n    _ = tastic_edgeGuardSwizzle`)
+    contents = contents.replace(DID_FINISH_LAUNCHING_RETURN_ANCHOR, `    _ = tastic_edgeGuardSwizzle\n${DID_FINISH_LAUNCHING_RETURN_ANCHOR}`)
     contents += SWIZZLE_SWIFT
 
     config.modResults.contents = contents

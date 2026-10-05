@@ -53,6 +53,8 @@ src/
     react-native.ts            - jest mock: Platform.OS ('ios'), Settings.set (jest.fn())
   __tests__/
     useEdgeGestureGuard.test.ts
+    withEdgeGestureGuard.test.ts - the plugin's AppDelegate transform, run through expo/config-plugins' real withAppDelegate chain
+    fixtures/                  - real AppDelegate.swift files the plugin test runs against (each file's header says where it came from)
 plugin/
   withEdgeGestureGuard.cjs     - Expo config plugin: swizzles UIViewController.preferredScreenEdgesDeferringSystemGestures in AppDelegate.swift, re-queries every window's root view controller on UserDefaults.didChangeNotification so a mid-session toggle takes effect without a restart
 app.plugin.js                  - Expo plugin entry point (what "plugins": ["@tastic/edge-guard"] in app.json resolves to); re-exports plugin/withEdgeGestureGuard.cjs
@@ -67,9 +69,25 @@ app.plugin.js                  - Expo plugin entry point (what "plugins": ["@tas
 writes it via RN's `Settings.set`, which is a thin bridge onto `NSUserDefaults` on iOS, and the
 plugin's swizzled getter reads it back with `UserDefaults.standard.bool(forKey:)`. No custom
 native module. The plugin only patches `AppDelegate.swift` (throws if the file isn't Swift, or if
-its expected anchors — the `ReactAppDependencyProvider` import and the `factory.startReactNative(...)`
-call — aren't found, since that means the Expo template changed underneath it), so a native
-rebuild (`expo prebuild` + a fresh build) is required after adding or removing the plugin.
+either of its anchors — the `ReactAppDependencyProvider` import and didFinishLaunching's
+`return super.application(application, didFinishLaunchingWithOptions: launchOptions)` line — isn't
+found, naming the missing one, since that means the Expo template changed underneath it), so a
+native rebuild (`expo prebuild` + a fresh build) is required after adding or removing the plugin.
+
+**The swizzle call goes right before that `return super.application(...)` line, not after
+`factory.startReactNative(...)`** (the anchor through 0.1.4). iOS 27 requires the UIScene life cycle,
+and Expo's scene-based AppDelegate (SDK 58's bare template, `expo-template-bare-minimum@58.0.6`, or
+SDK 57 with `expo-build-properties`' `ios.enableSceneSupport: true`) moves window creation and
+`startReactNative` into `SceneDelegate`, so the old anchor was gone and prebuild threw. The return
+line is in every bare template from SDK 54 (the `expo` peer floor) through 58, so this is one code
+path, not a per-template branch. It's still early enough: didFinishLaunching runs before any scene
+connects, and the swizzle is on the base `UIViewController` class, so it covers whatever root view
+controller `SceneDelegate` creates later (the `didChangeNotification` observer already walks
+`connectedScenes`). Checked against `expo-build-properties@57.0.22`'s scene-support mod in both
+plugin orders: 0.1.4 threw whenever that mod ran first, and the new anchor works either way.
+Idempotency is still just the `tastic_edgeGuardSwizzle` marker, so an AppDelegate already patched by
+0.1.4 is left as is. That only comes up on a prebuild without `--clean`, where 0.1.4's placement is
+still valid.
 
 ## Public API
 
@@ -89,8 +107,10 @@ From `src/index.ts`:
 
 - Framework: Jest (`@infinitetoken/jest-config/react-native`), jsdom environment
 - Mock: `src/__mocks__/react-native.ts` mapped over the real `react-native` module in `jest.config.cjs`
-- 6 tests in 1 suite (`useEdgeGestureGuard.test.ts`): mirrors `true`/`false` into `Settings.set`, re-syncs on `enabled` change, no-ops on non-iOS platforms, resets to `false` on unmount (and no-ops there too off iOS). The suite's own `afterEach` calls RTL's `cleanup()` explicitly, before `jest.clearAllMocks()`/resetting `Platform.OS` — needed once unmounting started having a real side effect (the mount-once cleanup effect), so a test that never calls `unmount()` itself doesn't leak a stray call into the next test via RTL's own implicit between-test unmount.
-- 100% statements/branches/functions/lines on `useEdgeGestureGuard.ts` (the only file coverage is collected on — the preset's default `collectCoverageFrom` excludes `src/index.ts`), well clear of the preset's 70%×4 default threshold
+- 21 tests in 2 suites
+- `useEdgeGestureGuard.test.ts` (6 tests): mirrors `true`/`false` into `Settings.set`, re-syncs on `enabled` change, no-ops on non-iOS platforms, resets to `false` on unmount (and no-ops there too off iOS). The suite's own `afterEach` calls RTL's `cleanup()` explicitly, before `jest.clearAllMocks()`/resetting `Platform.OS` — needed once unmounting started having a real side effect (the mount-once cleanup effect), so a test that never calls `unmount()` itself doesn't leak a stray call into the next test via RTL's own implicit between-test unmount.
+- `withEdgeGestureGuard.test.ts` (15 tests, `@jest-environment node`, since the plugin only ever runs in Node at prebuild time): requires `app.plugin.js` and runs its mod through the real `withAppDelegate` chain (no mocks) over fixtures in `src/__tests__/fixtures/`: the SDK 57 (`57.0.27`) and SDK 58 (`58.0.6`) bare templates' `AppDelegate.swift`, the 57 template after `expo-build-properties@57.0.22`'s `ios.enableSceneSupport: true` mod, and the 57 template after 0.1.4's plugin (byte-identical to what prebuild generated for all six consuming games). On each of the first three it checks that the output is the template plus only `import ObjectiveC` and the swizzle call (directly before `return super.application(...)`), with the appended definitions reading the same key the hook writes, and that a second run changes nothing. It also covers: the call still coming after `startReactNative` on the window-based template, the 0.1.4 output being left untouched, and the three errors (missing return line, missing import, Objective-C AppDelegate). Fixtures are excluded from the published package along with the rest of `src/__tests__`.
+- 100% statements/branches/functions/lines on `useEdgeGestureGuard.ts` (the only file coverage is collected on — the preset's default `collectCoverageFrom` excludes `src/index.ts` and only looks under `src/`, so `plugin/` isn't measured), well clear of the preset's 70%×4 default threshold
 
 ## Code Style
 
