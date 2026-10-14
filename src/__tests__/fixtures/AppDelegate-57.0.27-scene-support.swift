@@ -1,6 +1,6 @@
 // Test fixture: the expo-template-bare-minimum@57.0.27 AppDelegate.swift after
 // expo-build-properties@57.0.22's `ios.enableSceneSupport: true` AppDelegate mod, unmodified below
-// this header — SDK 57's opt-in to the scene-based life cycle, which strips the window creation and
+// this header - SDK 57's opt-in to the scene-based life cycle, which strips the window creation and
 // factory.startReactNative(...) call out of AppDelegate the same way the SDK 58 template does.
 
 internal import Expo

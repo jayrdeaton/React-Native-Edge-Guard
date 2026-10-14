@@ -1,5 +1,5 @@
 // Test fixture: the expo-template-bare-minimum@57.0.27 AppDelegate.swift after @tastic/edge-guard
-// 0.1.4's plugin, unmodified below this header — the swizzle call still sits right after
+// 0.1.4's plugin, unmodified below this header - the swizzle call still sits right after
 // factory.startReactNative(...), where 0.1.4 anchored it. Byte-identical to the AppDelegate.swift
 // `expo prebuild` generated for the consuming games at that version.
 

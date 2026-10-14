@@ -3,9 +3,9 @@ const { withAppDelegate } = require('expo/config-plugins')
 // Swizzles UIViewController.preferredScreenEdgesDeferringSystemGestures so the system defers its
 // top- and bottom-edge system gestures (Notification Center / Control Center at the top;
 // Reachability and the home-indicator swipe at the bottom) to the app first, whenever the player
-// has opted into that — see src/useEdgeGestureGuard.ts, which mirrors the setting into
-// UserDefaults under the key read below. Doesn't disable those gestures — the OS still honors a
-// second, more deliberate swipe — but stops light accidental swipes near either edge from firing
+// has opted into that - see src/useEdgeGestureGuard.ts, which mirrors the setting into
+// UserDefaults under the key read below. Doesn't disable those gestures - the OS still honors a
+// second, more deliberate swipe - but stops light accidental swipes near either edge from firing
 // over a full-screen or edge-anchored touch control zone mid-gameplay.
 //
 // This is done via swizzling rather than wrapping the root view controller since a second wrapper
@@ -59,7 +59,7 @@ const MARKER = 'tastic_edgeGuardSwizzle'
 function withEdgeGestureGuard(config) {
   return withAppDelegate(config, (config) => {
     if (config.modResults.language !== 'swift') {
-      throw new Error(`withEdgeGestureGuard expects AppDelegate.swift, got language "${config.modResults.language}". ` + 'The Expo template likely changed — update this plugin to match.')
+      throw new Error(`withEdgeGestureGuard expects AppDelegate.swift, got language "${config.modResults.language}". ` + 'The Expo template likely changed: update this plugin to match.')
     }
 
     let contents = config.modResults.contents
@@ -70,7 +70,7 @@ function withEdgeGestureGuard(config) {
 
     const missingAnchor = [IMPORT_ANCHOR, DID_FINISH_LAUNCHING_RETURN_ANCHOR].find((anchor) => !contents.includes(anchor))
     if (missingAnchor) {
-      throw new Error(`withEdgeGestureGuard could not find \`${missingAnchor.trim()}\` in AppDelegate.swift. ` + 'The Expo template likely changed — update this plugin to match.')
+      throw new Error(`withEdgeGestureGuard could not find \`${missingAnchor.trim()}\` in AppDelegate.swift. ` + 'The Expo template likely changed: update this plugin to match.')
     }
 
     contents = contents.replace(IMPORT_ANCHOR, `${IMPORT_ANCHOR}\nimport ObjectiveC`)

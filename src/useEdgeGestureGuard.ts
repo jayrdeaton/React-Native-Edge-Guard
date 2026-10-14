@@ -1,15 +1,15 @@
 import { useEffect } from 'react'
 import { Platform, Settings } from 'react-native'
 
-// Key this package's Expo config plugin reads via UserDefaults.standard.bool(forKey:) — see
+// Key this package's Expo config plugin reads via UserDefaults.standard.bool(forKey:) - see
 // plugin/withEdgeGestureGuard.cjs. react-native's built-in Settings module is a thin bridge
 // straight onto NSUserDefaults on iOS, so this constant plus the effect below is the entire
 // JS-to-native handoff: no custom native module required.
 export const EDGE_GUARD_USER_DEFAULTS_KEY = 'tastic_deferEdgeGestures'
 
 /**
- * Mirrors `enabled` into native UserDefaults so this package's config plugin — which swizzles
- * UIViewController.preferredScreenEdgesDeferringSystemGestures — can read it live and defer iOS's
+ * Mirrors `enabled` into native UserDefaults so this package's config plugin - which swizzles
+ * UIViewController.preferredScreenEdgesDeferringSystemGestures - can read it live and defer iOS's
  * top- and bottom-edge system gestures (Notification Center / Control Center at the top;
  * Reachability and the home-indicator swipe at the bottom) while it's on. Doesn't disable those
  * gestures, just requires a second, more deliberate swipe near the edge, so accidental swipes from
@@ -20,7 +20,7 @@ export const EDGE_GUARD_USER_DEFAULTS_KEY = 'tastic_deferEdgeGestures'
  *
  * Resets the native default back to `false` when the calling component unmounts, so it's safe to
  * scope a call to just the screen/component that owns the touch zone being protected (rather than
- * only ever mounting it once for an app's entire lifetime) — without this, a caller that stops
+ * only ever mounting it once for an app's entire lifetime) - without this, a caller that stops
  * rendering mid-`true` would leave the guard stuck on for whatever mounts next, or even across a
  * later cold launch, since UserDefaults persists across those too.
  */
@@ -30,7 +30,7 @@ export function useEdgeGestureGuard(enabled: boolean): void {
     Settings.set({ [EDGE_GUARD_USER_DEFAULTS_KEY]: enabled })
   }, [enabled])
 
-  // A separate, mount-once effect rather than a cleanup on the one above — a cleanup there would
+  // A separate, mount-once effect rather than a cleanup on the one above - a cleanup there would
   // also fire (and redundantly write `false`) on every ordinary `enabled` toggle, not just a real
   // unmount, since React tears down and re-runs an effect whenever its own deps change.
   useEffect(() => {

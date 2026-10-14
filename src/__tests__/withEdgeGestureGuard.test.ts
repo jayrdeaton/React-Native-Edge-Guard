@@ -12,7 +12,7 @@ const withEdgeGestureGuard = require('../../app.plugin.js')
 
 const fixture = (name: string) => readFileSync(join(__dirname, 'fixtures', name), 'utf8')
 
-// Real AppDelegate.swift files — see each fixture's own header for where it came from.
+// Real AppDelegate.swift files - see each fixture's own header for where it came from.
 const SDK_57 = fixture('AppDelegate-57.0.27.swift')
 const SDK_57_SCENE_SUPPORT = fixture('AppDelegate-57.0.27-scene-support.swift')
 const SDK_58 = fixture('AppDelegate-58.0.6.swift')
