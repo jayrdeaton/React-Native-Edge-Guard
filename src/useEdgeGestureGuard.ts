@@ -16,7 +16,8 @@ export const EDGE_GUARD_USER_DEFAULTS_KEY = 'tastic_deferEdgeGestures'
  * a full-screen or edge-anchored touch control zone don't kick the player out of the app.
  *
  * iOS only. On every other platform react-native's fallback Settings module just warns and
- * no-ops, so this skips the call entirely there rather than spamming that warning.
+ * no-ops, so this skips the call entirely there rather than spamming that warning. Android's half
+ * is edgeGuardScreenOptions, on the play screen's options rather than live from here.
  *
  * Resets the native default back to `false` when the calling component unmounts, so it's safe to
  * scope a call to just the screen/component that owns the touch zone being protected (rather than

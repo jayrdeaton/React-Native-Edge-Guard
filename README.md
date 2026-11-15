@@ -1,13 +1,17 @@
 # @tastic/edge-guard
 
-An opt-in guard against iOS's top- and bottom-edge system gestures (Notification Center / Control
-Center at the top; the home-indicator swipe and, incidentally, Reachability at the bottom) firing
-over a full-screen or edge-anchored touch control zone - the kind of zone a local-multiplayer
-arcade game's swipe-to-steer or swipe-to-aim controls tend to use. Without it, a player's swipe
-that starts too close to a physical screen edge is ambiguous between "steer the ship" and "leave
-the app" (or pull down Notification Center over it).
+An opt-in guard against the system's edge gestures firing over a full-screen or edge-anchored touch
+control zone - the kind of zone a local-multiplayer arcade game's swipe-to-steer or swipe-to-aim
+controls tend to use. Without it, a player's swipe that starts too close to a physical screen edge is
+ambiguous between "steer the ship" and "leave the app" (or pull down Notification Center over it).
+On iOS that's the top edge (Notification Center / Control Center) and the bottom (the home-indicator
+swipe and, incidentally, Reachability); on Android, the bottom (home, recents), the sides (back) and
+the top (the notification shade). Either way, with the guard on, the first swipe from an edge is held
+and only a second, deliberate one goes through.
 
 ## What it does
+
+### iOS
 
 An Expo config plugin swizzles `UIViewController.preferredScreenEdgesDeferringSystemGestures` so
 iOS defers its top- and bottom-edge system gestures to the app first. It doesn't disable those
@@ -24,7 +28,24 @@ something a player opts into after actually hitting the "accidental swipe near a
 out of the app" problem and gone looking for a fix, not a surprise "second swipe near the edge"
 behavior every player gets from install.
 
-iOS only. The plugin only patches `AppDelegate.swift`, and the hook no-ops on every other platform.
+The plugin only patches `AppDelegate.swift`, and the hook no-ops on every other platform.
+
+### Android
+
+Android has no way to defer its edge gestures. What it has is sticky immersive mode: with the system
+bars hidden and set to come back only transiently on a swipe, a swipe from the bottom, either side or
+the top just brings the bars back for a moment, and only a second swipe goes home, goes back or pulls
+down the shade. `edgeGuardScreenOptions(enabled)` returns the screen options that do that through
+react-native-screens (and so expo-router's and React Navigation's native stacks):
+`{ navigationBarHidden: true, statusBarHidden: true }` while enabled, `{ navigationBarHidden: false }`
+while not (a screen's own `statusBarHidden` stands), and `{}` on every other platform.
+react-native-screens sets `BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE` when it hides the navigation bar,
+and puts the bar back when the screen stops being the top one.
+
+They're screen options for the screen that owns the touch zone, not a live toggle, because hiding a
+bar changes the safe area: switching it every time a round starts or pauses would resize anything laid
+out from the insets mid-match. As a screen option the bars go once, as the screen opens, and stay gone
+until the player leaves it. No native code, so no config plugin and no native build for this half.
 
 ## Usage
 
@@ -38,7 +59,7 @@ iOS only. The plugin only patches `AppDelegate.swift`, and the hook no-ops on ev
 }
 ```
 
-**In your settings-backed state:**
+**In your settings-backed state (iOS):**
 
 ```tsx
 import { useEdgeGestureGuard } from '@tastic/edge-guard'
@@ -49,24 +70,22 @@ function App({ settings }: { settings: { deferEdgeGestures: boolean } }) {
 }
 ```
 
+**On the play screen's options (Android), spread after its own:**
+
+```tsx
+import { edgeGuardScreenOptions } from '@tastic/edge-guard'
+
+<Stack.Screen name='game' options={{ statusBarHidden: true, ...edgeGuardScreenOptions(settings.deferEdgeGestures) }} />
+```
+
+On 3-button navigation the buttons are hidden on that screen while the guard is on; a swipe from the
+bottom brings them back for a moment.
+
 Requires a native rebuild (`expo prebuild` + a fresh build) after adding or removing the plugin -
 plain JS/OTA reloads won't pick up an AppDelegate.swift change.
-
-## Install (local dev via yalc)
-
-Not published to the public npm registry yet.
-
-```bash
-cd react-native-edge-guard
-npm run build
-yalc publish
-
-cd ../your-game
-yalc add @tastic/edge-guard
-npm install
-```
 
 ## Peer dependencies
 
 `expo` (>=54.0.0) - for `expo/config-plugins`, used by the plugin only (Node/prebuild-time, never
-bundled into the app). `react` (>=19.0.0) and `react-native` (>=0.76.0) for the hook.
+bundled into the app). `react` (>=19.0.0) and `react-native` (>=0.76.0) for the hook and
+`edgeGuardScreenOptions`.

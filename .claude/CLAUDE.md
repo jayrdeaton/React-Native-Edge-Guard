@@ -4,10 +4,12 @@ This file provides guidance to Claude Code when working in this repository.
 
 # @tastic/edge-guard
 
-Opt-in guard against iOS's top- and bottom-edge system gestures (Notification Center / Control
-Center at the top; the home-indicator swipe and Reachability at the bottom) firing over a
-full-screen or edge-anchored touch control zone. An Expo config plugin swizzles the relevant
-UIKit getter; a hook drives it live from a settings toggle.
+Opt-in guard against the system's edge gestures firing over a full-screen or edge-anchored touch
+control zone. On iOS (Notification Center / Control Center at the top; the home-indicator swipe and
+Reachability at the bottom) an Expo config plugin swizzles the relevant UIKit getter and a hook drives
+it live from a settings toggle. On Android (home and recents at the bottom, back at the sides, the
+shade at the top) `edgeGuardScreenOptions` hands the play screen's stack sticky immersive mode. See
+"Android (2026-11-14)" below.
 
 Part of the `@tastic`/`@rific` package ecosystem. Published to the public npm registry (no
 `private` field, `publishConfig.access: "public"`) - `0.1.1` is live at
@@ -47,12 +49,14 @@ this package's own `verify` script.
 
 ```
 src/
-  index.ts                     - public exports: EDGE_GUARD_USER_DEFAULTS_KEY, useEdgeGestureGuard
+  index.ts                     - public exports: EDGE_GUARD_USER_DEFAULTS_KEY, useEdgeGestureGuard, edgeGuardScreenOptions, EdgeGuardScreenOptions
+  edgeGuardScreenOptions.ts    - Android's half: screen options (navigationBarHidden, statusBarHidden) for sticky immersive mode, {} off Android
   useEdgeGestureGuard.ts       - the hook: mirrors `enabled` into native UserDefaults via RN's built-in Settings bridge, iOS only, no-ops elsewhere
   __mocks__/
     react-native.ts            - jest mock: Platform.OS ('ios'), Settings.set (jest.fn())
   __tests__/
     useEdgeGestureGuard.test.ts
+    edgeGuardScreenOptions.test.ts
     withEdgeGestureGuard.test.ts - the plugin's AppDelegate transform, run through expo/config-plugins' real withAppDelegate chain
     fixtures/                  - real AppDelegate.swift files the plugin test runs against (each file's header says where it came from)
 plugin/
@@ -89,11 +93,42 @@ Idempotency is still just the `tastic_edgeGuardSwizzle` marker, so an AppDelegat
 0.1.4 is left as is. That only comes up on a prebuild without `--clean`, where 0.1.4's placement is
 still valid.
 
+## Android (2026-11-14)
+
+Jay wanted Edge Guard on Android. Android can't defer its edge gestures the way iOS does, and apps
+can't opt out of the home gesture at all; the one thing that gets "a second swipe" is sticky immersive
+mode (system bars hidden with `BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE`): a swipe from the bottom, a side
+or the top only brings the bars back for a moment, and the next one goes home, back or into the shade.
+
+- **`edgeGuardScreenOptions(enabled)`** returns react-native-screens' screen options, to spread after a
+  play screen's own: `{ navigationBarHidden: true, statusBarHidden: true }` on Android while enabled,
+  `{ navigationBarHidden: false }` while not (a screen's own `statusBarHidden` stands), `{}` elsewhere.
+  react-native-screens' `ScreenWindowTraits.setNavigationBarHidden` hides the navigation bar and sets the
+  transient behavior (window-wide, so it covers a status bar hidden by `statusBarHidden` too), and shows
+  the bar again when the screen stops being the top one. Checked in react-native-screens 4.30.1.
+- **Why screen options, not a live toggle driven by the hook (Jay's call, 2026-11-14):** hiding a bar
+  changes the safe area (react-native-safe-area-context reads the visible insets), so flipping it as a
+  round starts or pauses would resize anything laid out from the insets mid-match (PuckTastic's rink is).
+  As a screen option the bars go once, as the screen opens, like a play screen's hidden status bar
+  already does, and stay gone until the player leaves it: two swipes while paused or between rounds
+  too. The other option offered was a native module keeping the bars hidden for the whole screen and
+  switching only the behavior per live round (`BEHAVIOR_DEFAULT` lets gestures through with the bars
+  hidden under gesture navigation); turned down as more moving parts and a native build.
+- **No native code**, so nothing to rebuild and it ships OTA. The config plugin stays iOS-only.
+- **Why `statusBarHidden` too:** a visible status bar pulls the shade in one swipe. That also hides it on
+  a game that keeps it (CardTastic's `keepStatusBar` games) while the guard is on.
+- **The back gesture:** the two-swipe behavior at the side edges comes from developer reports, not
+  Android's docs; `setSystemGestureExclusionRects` (back only, 200dp per edge except while the nav bar
+  is stickily hidden) would turn back off completely there and wasn't needed for parity.
+- Tests: `edgeGuardScreenOptions.test.ts` (Android on and off, spread over a screen's own options, `{}`
+  on iOS and the web).
+
 ## Public API
 
 From `src/index.ts`:
 
 - `EDGE_GUARD_USER_DEFAULTS_KEY` - the UserDefaults key (`'tastic_deferEdgeGestures'`) the config plugin reads
+- `edgeGuardScreenOptions(enabled: boolean): EdgeGuardScreenOptions` - Android's half, see above.
 - `useEdgeGestureGuard(enabled: boolean): void` - mirrors `enabled` into native UserDefaults on iOS; no-op on every other platform. Resets the default back to `false` on unmount (a separate, mount-once effect, not a cleanup on the sync effect - see the hook's own doc) - a defensive improvement for any future caller that scopes this hook to a screen/component rather than an app's whole lifetime, though no current consumer actually does that (see below).
   - Real consumers (Snake, LightCycles, AirHockey, Pong, BoxHockey) all call this exactly once, permanently mounted at the app root (Snake: `Providers.tsx`'s `EdgeGuardBridge`; the other four: `useGameSettings.tsx`'s `GameSettingsProvider`) - matching every other cross-cutting settings bridge in those apps (haptics, sound, scroll-view). `enabled` combines the persisted user setting with a transient "is a round actually live right now" signal that each app's own game screen reports up (Redux for Snake - a small dedicated `liveplaySlice`, built on `@rific/core`'s `createSettingsSlice` and blacklisted from redux-persist; Context for the other four, a plain non-persisted field alongside `activeRoundSettings`), rather than the hook itself being mounted/unmounted per screen. That's what actually keeps Edge Guard both a real opt-in and scoped to actual gameplay - the unmount-reset above isn't what's doing that work for any of them today.
 
@@ -101,7 +136,7 @@ From `src/index.ts`:
 
 - `expo` >=54.0.0 - required for `expo/config-plugins`, used by `plugin/withEdgeGestureGuard.cjs` only (Node/prebuild-time, never bundled into the app)
 - `react` >=19.0.0 - required
-- `react-native` >=0.76.0 - required, for the `Platform`/`Settings` modules the hook uses
+- `react-native` >=0.76.0 - required, for the `Platform`/`Settings` modules the hook and `edgeGuardScreenOptions` use
 
 ## Testing
 
