@@ -81,8 +81,8 @@ import { edgeGuardScreenOptions } from '@tastic/edge-guard'
 On 3-button navigation the buttons are hidden on that screen while the guard is on; a swipe from the
 bottom brings them back for a moment.
 
-Requires a native rebuild (`expo prebuild` + a fresh build) after adding or removing the plugin -
-plain JS/OTA reloads won't pick up an AppDelegate.swift change.
+The iOS plugin requires a native rebuild (`expo prebuild` + a fresh build) after adding or removing
+it: plain JS/OTA reloads won't pick up an AppDelegate.swift change. Android's half needs no rebuild.
 
 ## Peer dependencies
 
