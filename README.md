@@ -100,3 +100,7 @@ running it again on an already-patched `AppDelegate.swift` changes nothing.
 `expo` (>=54.0.0) - for `expo/config-plugins`, used by the plugin only (Node/prebuild-time, never
 bundled into the app). `react` (>=19.0.0) and `react-native` (>=0.76.0) for the hook and
 `edgeGuardScreenOptions`.
+
+---
+
+Made by [Infinite Token](https://www.infinitetoken.com), the team behind [Lumber](https://lumber.infinitetoken.com): end-to-end encrypted logging.
