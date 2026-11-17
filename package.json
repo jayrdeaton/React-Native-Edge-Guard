@@ -1,6 +1,6 @@
 {
   "name": "@tastic/edge-guard",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Opt-in guard against the system's edge gestures firing over a full-screen or edge-anchored touch control zone: on iOS an Expo config plugin plus the hook that drives it live from a settings toggle, on Android screen options for sticky immersive mode",
   "keywords": [
     "react-native",
