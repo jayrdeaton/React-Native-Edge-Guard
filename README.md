@@ -23,6 +23,12 @@ The `useEdgeGestureGuard(enabled)` hook is the runtime half: it mirrors `enabled
 required), which the plugin reads live and re-applies immediately on change, so flipping a settings
 toggle mid-session takes effect without an app restart.
 
+When the component that calls the hook unmounts, it writes `false` back, so you can call it from
+just the screen that owns the touch zone instead of once for the app's lifetime: the guard doesn't
+stay on for whatever mounts next, or across a later cold launch (`UserDefaults` persists). The
+`UserDefaults` key is exported as `EDGE_GUARD_USER_DEFAULTS_KEY` (`'tastic_deferEdgeGestures'`), the
+boolean the plugin reads, for native code or tests of your own that need the same value.
+
 Deliberately **off by default** wherever you wire it to a persisted setting - this is meant to be
 something a player opts into after actually hitting the "accidental swipe near an edge kicked me
 out of the app" problem and gone looking for a fix, not a surprise "second swipe near the edge"
@@ -83,6 +89,11 @@ bottom brings them back for a moment.
 
 The iOS plugin requires a native rebuild (`expo prebuild` + a fresh build) after adding or removing
 it: plain JS/OTA reloads won't pick up an AppDelegate.swift change. Android's half needs no rebuild.
+
+The plugin is the package's `./app.plugin.js` entry, which Expo finds from the bare package name
+above, and takes no options. It stops `expo prebuild` with an error, rather than skipping the patch,
+when `AppDelegate` isn't Swift or lacks the lines it anchors to (a changed Expo template), and
+running it again on an already-patched `AppDelegate.swift` changes nothing.
 
 ## Peer dependencies
 
